@@ -92,7 +92,18 @@ def fast_eval(df: pd.DataFrame, expr: str, **kwargs) -> Any | None:
         kwargs["target"] = df
     kwargs["resolvers"] = tuple(kwargs.get("resolvers", ())) + resolvers
 
+    # Fix for Pandas 2.1+ Categorical math
+    # Identify columns in the dataframe that are categories and convert to codes for the eval
+    cat_cols = df.select_dtypes(include=["category"]).columns
+    if not cat_cols.empty:
+        # Use a shallow copy to avoid changing the original data
+        df = df.copy()
+        for col in cat_cols:
+            # Convert to integer codes so math like 'has_non_worker * escort' works
+            df[col] = df[col].cat.codes
+
     try:
+        
         return pd.Series(
             _eval(expr, inplace=inplace, **kwargs), index=df.index, name=expr
         ).__finalize__(df)

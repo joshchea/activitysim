@@ -278,6 +278,13 @@ def utils_to_probs(
         #     utils_arr = np.exp(utils_arr)
         utils_arr = np.exp(utils_arr)
 
+    # np.putmask(utils_arr, utils_arr <= EXP_UTIL_MIN, 0)
+
+    # Force writable for Python 3.12/NumPy 2.x compatibility
+    if not utils_arr.flags.writeable:
+        utils_arr = utils_arr.copy()
+
+    # The line that was crashing:
     np.putmask(utils_arr, utils_arr <= EXP_UTIL_MIN, 0)
 
     arr_sum = utils_arr.sum(axis=1)

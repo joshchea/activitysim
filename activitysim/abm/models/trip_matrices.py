@@ -324,7 +324,8 @@ def annotate_trips(
         state, trips_df, locals_dict, skims, model_settings, trace_label
     )
 
-    if not np.issubdtype(trips_df["trip_period"].dtype, np.integer):
+    # if not np.issubdtype(trips_df["trip_period"].dtype, np.integer):
+    if not pd.api.types.is_integer_dtype(trips_df["trip_period"]):
         if hasattr(skim_dict, "map_time_periods_from_series"):
             trip_period_idx = skim_dict.map_time_periods_from_series(
                 trips_df["trip_period"]

@@ -958,7 +958,8 @@ def trip_destination_simulate(
             trip_period_idx = skims["odt_skims"].map_time_periods(trips)
             if trip_period_idx is not None:
                 trips["trip_period"] = trip_period_idx
-    elif not np.issubdtype(trips["trip_period"].dtype, np.integer):
+    elif not pd.api.types.is_integer_dtype(trips["trip_period"]):
+    # elif not np.issubdtype(trips["trip_period"].dtype, np.integer):
         if hasattr(skims["odt_skims"], "map_time_periods"):
             trip_period_idx = skims["odt_skims"].map_time_periods(trips)
             if trip_period_idx is not None:
@@ -1401,7 +1402,9 @@ def run_trip_destination(
                     )
                     if trip_period_idx is not None:
                         nth_trips["trip_period"] = trip_period_idx
-            elif not np.issubdtype(nth_trips["trip_period"].dtype, np.integer):
+            # Use pandas-native checker to avoid NumPy 2.x / StringDtype conflict
+            elif not pd.api.types.is_integer_dtype(nth_trips["trip_period"].dtype):
+            # elif not np.issubdtype(nth_trips["trip_period"].dtype, np.integer):
                 skims = network_los.get_default_skim_dict()
                 if hasattr(skims, "map_time_periods_from_series"):
                     trip_period_idx = skims.map_time_periods_from_series(

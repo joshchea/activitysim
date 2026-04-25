@@ -264,7 +264,25 @@ class SkimDict:
         """
 
         # fixme - remove?
-        assert not (np.isnan(orig) | np.isnan(dest)).any()
+        # assert not (np.isnan(orig) | np.isnan(dest)).any()
+
+        # Force to numeric to satisfy NumPy 2.x and allow .max() logging
+        if isinstance(orig, pd.Series) and isinstance(orig.dtype, pd.CategoricalDtype):
+            orig = pd.to_numeric(orig, errors='coerce')
+        if isinstance(dest, pd.Series) and isinstance(dest.dtype, pd.CategoricalDtype):
+            dest = pd.to_numeric(dest, errors='coerce')
+
+        # Your previous NaN check now works safely
+        orig_nan = np.isnan(orig) if np.issubdtype(orig.dtype, np.floating) else False
+        dest_nan = np.isnan(dest) if np.issubdtype(dest.dtype, np.floating) else False
+        
+        assert not (np.any(orig_nan) or np.any(dest_nan))
+
+        # NumPy 2.0 Fix: Only check for NaN if the inputs are floating point types
+        # orig_nan = np.isnan(orig) if np.issubdtype(orig.dtype, np.floating) else False
+        # dest_nan = np.isnan(dest) if np.issubdtype(dest.dtype, np.floating) else False
+        
+        # assert not (np.any(orig_nan) or np.any(dest_nan))
 
         # only working with numpy in here
         orig = np.asanyarray(orig).astype(int)

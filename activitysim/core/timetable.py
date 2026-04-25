@@ -541,6 +541,13 @@ class TimeTable(object):
         # row idxs of windows to assign to
         row_ixs = self.window_row_ix.apply_to(window_row_ids)
 
+        # self.windows[row_ixs] = np.bitwise_or(self.windows[row_ixs], tour_footprints) 
+
+        # Check if the array is read-only and force it to be writable
+        if not self.windows.flags.writeable:
+            self.windows = self.windows.copy()
+
+        # Now the original assignment will work
         self.windows[row_ixs] = np.bitwise_or(self.windows[row_ixs], tour_footprints)
 
     def assign_subtour_mask(self, window_row_ids, tdds):
@@ -569,7 +576,16 @@ class TimeTable(object):
 
         assert len(window_row_ids) == len(tdds)
 
+        # self.windows.fill(0)
+
+        # Force writable for Python 3.12/NumPy 2.x compatibility
+        if not self.windows.flags.writeable:
+            self.windows = self.windows.copy()
+
+        # The line that was crashing:
         self.windows.fill(0)
+
+
         self.assign(window_row_ids, tdds)
 
         # numpy array with one time window row for each person tdd
@@ -606,7 +622,15 @@ class TimeTable(object):
         # row idxs of windows to assign to
         row_ixs = self.window_row_ix.apply_to(window_row_ids)
 
+        # self.windows[row_ixs] = np.bitwise_or(self.windows[row_ixs], footprints)
+
+        # Check if the array is read-only and force a writable copy for Python 3.12/Pandas 2.1
+        if not self.windows.flags.writeable:
+            self.windows = self.windows.copy()
+
+        # Now the assignment will work
         self.windows[row_ixs] = np.bitwise_or(self.windows[row_ixs], footprints)
+
 
     def pairwise_available(self, window1_row_ids, window2_row_ids):
         available1 = (self.slice_windows_by_row_id(window1_row_ids) != I_MIDDLE) * 1

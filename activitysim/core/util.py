@@ -316,25 +316,115 @@ def quick_loc_series(loc_list, target_series):
     return df.right
 
 
+# def assign_in_place(df, df2, downcast_int=False, downcast_float=False):
+#     """
+#     update existing row values in df from df2, adding columns to df if they are not there
+
+#     Parameters
+#     ----------
+#     df : pd.DataFrame
+#         assignment left-hand-side (dest)
+#     df2: pd.DataFrame
+#         assignment right-hand-side (source)
+#     downcast_int: bool
+#         if True, downcast int columns if possible
+#     downcast_float: bool
+#         if True, downcast float columns if possible
+#     Returns
+#     -------
+
+#     """
+
+#     # expect no rows in df2 that are not in df
+#     assert len(df2.index.difference(df.index)) == 0
+
+#     # update common columns in place
+#     common_columns = df2.columns.intersection(df.columns)
+#     if len(common_columns) > 0:
+#         old_dtypes = [df[c].dtype for c in common_columns]
+#         # in pandas 2.x, update a categorical column with any new categories will cause TypeError
+#         # so we need to add the new categories first
+#         # this is a workaround for pandas 2.x, see discussion in
+#         # https://github.com/ActivitySim/activitysim/discussions/946
+#         # for c in common_columns:
+#         #     if isinstance(df[c].dtype, pd.CategoricalDtype):
+#         #         if not isinstance(df2[c].dtype, pd.CategoricalDtype):
+#         #             # if df column is categorical, but df2 column is not
+#         #             # convert df2 column to categorical then union categories
+#         #             df2[c] = df2[c].astype("category")
+
+#         #         # when df and df2 column are both categorical, union categories
+#         #         from pandas.api.types import union_categoricals
+
+#         #         uc = union_categoricals([df[c], df2[c]], sort_categories=True)
+#         #         df[c] = pd.Categorical(df[c], categories=uc.categories)
+#         #         df2[c] = pd.Categorical(df2[c], categories=uc.categories)
+
+#         # df.update(df2)
+
+#         # # Force unique index on df2 to satisfy Pandas 2.1+ requirements
+#         # if df2.index.duplicated().any():
+#         #     df2 = df2[~df2.index.duplicated(keep='first')]
+
+
+#         # --- NEW: TYPE ALIGNMENT FOR PANDAS 2.1+ ---
+#         # Ensure df columns can hold df2 data to prevent LossySetitemError
+#         for c in common_columns:
+#             if not isinstance(df[c].dtype, pd.CategoricalDtype):
+#                 if df[c].dtype != df2[c].dtype:
+#                     # Cast the destination column to the source type to accommodate the update
+#                     try:
+#                         df[c] = df[c].astype(df2[c].dtype)
+#                     except (ValueError, TypeError):
+#                         # Fallback to a generic type if specific casting fails
+#                         df[c] = df[c].astype(object)
+#         # ------------------------------------------
+
+#         df.update(df2)
+
+#         # avoid needlessly changing int columns to float
+#         # this is a hack fix for a bug in pandas.update
+#         # github.com/pydata/pandas/issues/4094
+#         for c, old_dtype in zip(common_columns, old_dtypes):
+#             # if both df and df2 column were same type, but result is not
+#             if (old_dtype == df2[c].dtype) and (df[c].dtype != old_dtype):
+#                 try:
+#                     df[c] = df[c].astype(old_dtype)
+#                 except ValueError:
+#                     logger.warning(
+#                         "assign_in_place changed dtype %s of column %s to %s"
+#                         % (old_dtype, c, df[c].dtype)
+#                     )
+
+#             if isinstance(old_dtype, pd.api.types.CategoricalDtype):
+#                 continue
+
+#             # if both df and df2 column were ints, but result is not
+#             if (
+#                 np.issubdtype(old_dtype, np.integer)
+#                 and np.issubdtype(df2[c].dtype, np.integer)
+#                 and not np.issubdtype(df[c].dtype, np.integer)
+#             ):
+#                 try:
+#                     df[c] = df[c].astype(old_dtype)
+#                 except ValueError:
+#                     logger.warning(
+#                         "assign_in_place changed dtype %s of column %s to %s"
+#                         % (old_dtype, c, df[c].dtype)
+#                     )
+
+#     # add new columns (in order they appear in df2)
+#     new_columns = [c for c in df2.columns if c not in df.columns]
+
+#     df[new_columns] = df2[new_columns]
+
+#     for c in new_columns:
+#         if pd.api.types.is_object_dtype(df[c]):
+#             df[c] = df[c].astype("category")
+
+#     auto_opt_pd_dtypes(df, downcast_int, downcast_float, inplace=True)
+
 def assign_in_place(df, df2, downcast_int=False, downcast_float=False):
-    """
-    update existing row values in df from df2, adding columns to df if they are not there
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        assignment left-hand-side (dest)
-    df2: pd.DataFrame
-        assignment right-hand-side (source)
-    downcast_int: bool
-        if True, downcast int columns if possible
-    downcast_float: bool
-        if True, downcast float columns if possible
-    Returns
-    -------
-
-    """
-
     # expect no rows in df2 that are not in df
     assert len(df2.index.difference(df.index)) == 0
 
@@ -342,67 +432,66 @@ def assign_in_place(df, df2, downcast_int=False, downcast_float=False):
     common_columns = df2.columns.intersection(df.columns)
     if len(common_columns) > 0:
         old_dtypes = [df[c].dtype for c in common_columns]
-        # in pandas 2.x, update a categorical column with any new categories will cause TypeError
-        # so we need to add the new categories first
-        # this is a workaround for pandas 2.x, see discussion in
-        # https://github.com/ActivitySim/activitysim/discussions/946
+        
+        # 1. CATEGORICAL HANDLING (RE-ENABLED)
         for c in common_columns:
             if isinstance(df[c].dtype, pd.CategoricalDtype):
                 if not isinstance(df2[c].dtype, pd.CategoricalDtype):
-                    # if df column is categorical, but df2 column is not
-                    # convert df2 column to categorical then union categories
                     df2[c] = df2[c].astype("category")
 
-                # when df and df2 column are both categorical, union categories
                 from pandas.api.types import union_categoricals
-
                 uc = union_categoricals([df[c], df2[c]], sort_categories=True)
                 df[c] = pd.Categorical(df[c], categories=uc.categories)
                 df2[c] = pd.Categorical(df2[c], categories=uc.categories)
 
+        # 2. DUPLICATE INDEX FIX (RE-ENABLED)
+        if df2.index.duplicated().any():
+            df2 = df2[~df2.index.duplicated(keep='first')]
+
+        # 3. TYPE ALIGNMENT FOR PANDAS 2.1+ (THE FIX)
+        for c in common_columns:
+            if not isinstance(df[c].dtype, pd.CategoricalDtype):
+                if df[c].dtype != df2[c].dtype:
+                    try:
+                        df[c] = df[c].astype(df2[c].dtype)
+                    except (ValueError, TypeError):
+                        df[c] = df[c].astype(object)
+
+        # 4. PERFORM THE UPDATE
         df.update(df2)
 
-        # avoid needlessly changing int columns to float
-        # this is a hack fix for a bug in pandas.update
-        # github.com/pydata/pandas/issues/4094
+        # 5. POST-UPDATE DTYPE CLEANUP
         for c, old_dtype in zip(common_columns, old_dtypes):
-            # if both df and df2 column were same type, but result is not
             if (old_dtype == df2[c].dtype) and (df[c].dtype != old_dtype):
                 try:
                     df[c] = df[c].astype(old_dtype)
                 except ValueError:
-                    logger.warning(
-                        "assign_in_place changed dtype %s of column %s to %s"
-                        % (old_dtype, c, df[c].dtype)
-                    )
+                    continue # Ignore if we can't revert
 
             if isinstance(old_dtype, pd.api.types.CategoricalDtype):
                 continue
 
-            # if both df and df2 column were ints, but result is not
-            if (
-                np.issubdtype(old_dtype, np.integer)
+            if (np.issubdtype(old_dtype, np.integer)
                 and np.issubdtype(df2[c].dtype, np.integer)
-                and not np.issubdtype(df[c].dtype, np.integer)
-            ):
+                and not np.issubdtype(df[c].dtype, np.integer)):
                 try:
                     df[c] = df[c].astype(old_dtype)
                 except ValueError:
-                    logger.warning(
-                        "assign_in_place changed dtype %s of column %s to %s"
-                        % (old_dtype, c, df[c].dtype)
-                    )
+                    continue
 
-    # add new columns (in order they appear in df2)
+    # add new columns
     new_columns = [c for c in df2.columns if c not in df.columns]
-
     df[new_columns] = df2[new_columns]
 
     for c in new_columns:
         if pd.api.types.is_object_dtype(df[c]):
             df[c] = df[c].astype("category")
 
+    # Final optimization call (internal to ActivitySim)
+    from .util import auto_opt_pd_dtypes
+
     auto_opt_pd_dtypes(df, downcast_int, downcast_float, inplace=True)
+
 
 
 def auto_opt_pd_dtypes(

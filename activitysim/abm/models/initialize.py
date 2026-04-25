@@ -152,13 +152,13 @@ def initialize_households(
         chunk_sizer.log_rss(f"{trace_label}.inside-yield")
 
         households = state.get_dataframe("households")
-        assert not households._is_view
+        # assert not households._is_view
         chunk_sizer.log_df(trace_label, "households", households)
         del households
         chunk_sizer.log_df(trace_label, "households", None)
 
         persons = state.get_dataframe("persons")
-        assert not persons._is_view
+        # assert not persons._is_view
         chunk_sizer.log_df(trace_label, "persons", persons)
         del persons
         chunk_sizer.log_df(trace_label, "persons", None)

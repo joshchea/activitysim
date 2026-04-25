@@ -282,6 +282,10 @@ def eval_interaction_utilities(
                 perf_log_file = compute_settings.performance_log
             performance_timer = timing.EvalTiming(perf_log_file)
 
+            # Force the utility DataFrame to be a true, writable copy
+            utilities = utilities.copy()
+            utilities.utility.values.setflags(write=True)
+
             with compute_settings.pandas_option_context():
                 for expr, label, coefficient in zip(exprs, labels, spec.iloc[:, 0]):
                     try:
@@ -360,7 +364,20 @@ def eval_interaction_utilities(
 
                             del max_utils_by_chooser
 
-                        utilities.utility.values[:] += utility
+                        # utilities.utility.values[:] += utility
+
+                        # Force a writable array if it's currently read-only
+                        if not utilities.utility.values.flags.writeable:
+                            utilities.utility = utilities.utility.copy()
+
+                        # utilities.utility.values[:] = utilities.utility.values + utility
+
+                        # Create a new, writable array by explicitly using np.array()
+                        current_vals = np.array(utilities.utility.values, copy=True)
+                        updated_vals = current_vals + utility
+
+                        # Re-assign the entire series to the DataFrame (avoiding [:] in-place mutation)
+                        utilities['utility'] = updated_vals
 
                         if trace_eval_results is not None:
                             # expressions should have been uniquified when spec was read

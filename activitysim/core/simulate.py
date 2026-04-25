@@ -1,5 +1,8 @@
 # ActivitySim
 # See full license in LICENSE.txt.
+# import numpy as np
+# import pandas as pd
+
 from __future__ import annotations
 
 import logging
@@ -683,16 +686,62 @@ def eval_utilities(
         with compute_settings.pandas_option_context():
             for expr, coefficients in zip(exprs, spec.values):
                 try:
+                    # with warnings.catch_warnings(record=True) as w:
+                    #     # Cause all warnings to always be triggered.
+                    #     warnings.simplefilter("always")
+ 
+                    # --- 1. Fix read-only utilities (The previous fix) ---
+                    if utilities is not None and 'utility' in utilities.columns:
+                        if not utilities.utility.values.flags.writeable:
+                            utilities = utilities.copy()
+                        utilities['utility'] = utilities['utility'].astype(float)
+
                     with warnings.catch_warnings(record=True) as w:
-                        # Cause all warnings to always be triggered.
                         warnings.simplefilter("always")
                         with performance_timer.time_expression(expr):
+                            # if expr.startswith("@"):
+                            #     # --- 2. Fix Categorical Choosers (Expanded) ---
+                            #     cat_cols = choosers.select_dtypes(include=["category"]).columns
+                            #     if not cat_cols.empty:
+                            #         choosers = choosers.copy()
+                            #         for col in cat_cols:
+                            #             # Attempt numeric, fallback to codes
+                            #             nums = pd.to_numeric(choosers[col], errors='coerce')
+                                        # choosers[col] = nums.fillna(choosers[col].cat.codes).astype(float)
+                            
                             if expr.startswith("@"):
-                                expression_value = eval(
-                                    expr[1:], globals_dict, locals_dict
-                                )
+                                # --- 1. Fix Choosers ---
+                                bad_types = ["category", "object"]
+                                cat_cols = choosers.select_dtypes(include=bad_types).columns
+                                if not cat_cols.empty:
+                                    choosers = choosers.copy()
+                                    for col in cat_cols:
+                                        nums = pd.to_numeric(choosers[col], errors='coerce')
+                                        if hasattr(choosers[col], 'cat'):
+                                            choosers[col] = nums.fillna(choosers[col].cat.codes).astype(float)
+                                        else:
+                                            choosers[col] = nums.astype(float)
+
+                                # --- 2. Fix 'df' alias in locals_dict (The likely culprit) ---
+                                if 'df' in locals_dict:
+                                    df_alias = locals_dict['df']
+                                    if isinstance(df_alias, pd.DataFrame):
+                                        bad_df_cols = df_alias.select_dtypes(include=bad_types).columns
+                                        if not bad_df_cols.empty:
+                                            df_alias = df_alias.copy()
+                                            for col in bad_df_cols:
+                                                nums = pd.to_numeric(df_alias[col], errors='coerce')
+                                                if hasattr(df_alias[col], 'cat'):
+                                                    df_alias[col] = nums.fillna(df_alias[col].cat.codes).astype(float)
+                                                else:
+                                                    df_alias[col] = nums.astype(float)
+                                            locals_dict['df'] = df_alias
+
+                                expression_value = eval(expr[1:], globals_dict, locals_dict)
+
                             else:
                                 expression_value = fast_eval(choosers, expr)
+
 
                         if len(w) > 0:
                             for wrn in w:

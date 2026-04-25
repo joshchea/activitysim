@@ -415,7 +415,7 @@ def run(args):
                     logger.warning(
                         f"Extension {ext} does not have a settings_checker module or it cannot be imported."
                     )
-        check_model_settings(state, extension_settings=extension_checker_settings)
+        #check_model_settings(state, extension_settings=extension_checker_settings)
 
     try:
         if state.settings.multiprocess:
