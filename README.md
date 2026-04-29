@@ -4,9 +4,8 @@ This is a personal fork of ActivitySim. This repository is my private environmen
     Compatibility: Updates are frequently made here to ensure compatibility with modern Python environments and library versions.
     Stability: This branch may be unstable. For the official, production-ready codebase, please visit the Official ActivitySim Repository.
 
-============
 ActivitySim
-============
+===========
 The mission of the ActivitySim project is to create and maintain advanced, open-source,
 activity-based travel behavior modeling software based on best software development
 practices for distribution at no charge to the public.
